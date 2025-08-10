@@ -6,7 +6,7 @@ on:
       version:
         description: "The commit or tag of microbit-foundation/micropython-microbit-v2 repository"
         required: true
-        default: "HEAD"
+        default: "master"
       codal_microbit_v2_version:
         description: "The commit or tag of lancaster-university/codal-microbit-v2 repository"
         required: true
@@ -47,6 +47,11 @@ jobs:
           ref: ${{ steps.set_ref.outputs.ref }}
           submodules: true
           fetch-depth: 0
+      - name: Update MICROBIT_RELEASE version if v2.1.2 tag exists
+        run: |
+          if git tag | grep -q '^v2.1.2$'; then
+            sed -i 's/^#define MICROBIT_RELEASE "2.1.1"$/#define MICROBIT_RELEASE "2.1.2"/' src/codal_port/mpconfigport.h
+          fi
       - name: Update codal.json to specified codal-microbit-v2 version
         run: |
           if [ "${{ github.event.inputs.codal_microbit_v2_version }}" = "latest_tag" ]; then
@@ -61,7 +66,7 @@ jobs:
           cd lib/micropython
           git fetch --tags
           if [ "${{ github.event.inputs.micropython_version }}" = "latest_tag" ]; then
-            tag=$(git tag --sort=-creatordate | tail -n1)
+            tag=$(git tag --sort=-creatordate | head -n1)
             git checkout "$tag"
           else
             git checkout "${{ github.event.inputs.micropython_version }}"
@@ -71,7 +76,7 @@ jobs:
           cd lib/codal
           git fetch --tags
           if [ "${{ github.event.inputs.codal_version }}" = "latest_tag" ]; then
-            tag=$(git tag --sort=-creatordate | tail -n1)
+            tag=$(git tag --sort=-creatordate | head -n1)
             git checkout "$tag"
           else
             git checkout "${{ github.event.inputs.codal_version }}"
@@ -82,7 +87,7 @@ jobs:
           python-version: "3.13"
       - uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
-          version: ${{ github.event.inputs.arm_none_eabi_gcc_version }}
+          release: ${{ github.event.inputs.arm_none_eabi_gcc_version }}
       - name: Build mpy-cross
         run: make -C lib/micropython/mpy-cross -j2
       - name: Build MicroPython
@@ -90,8 +95,10 @@ jobs:
           CFLAGS: "${{ github.event.inputs.optimization_flags }}"
           CXXFLAGS: "${{ github.event.inputs.optimization_flags }}"
         run: CMAKE_POLICY_VERSION_MINIMUM=3.5 make -C src -j2
+      - name: Rename hex file
+        run: mv src/MICROBIT.hex src/micropython-microbit-v2-custom.hex
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: micropython-microbit-v2-custom.hex
-          path: src/MICROBIT.hex
+          path: src/micropython-microbit-v2-custom.hex
