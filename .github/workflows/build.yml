@@ -1,0 +1,97 @@
+name: Build MicroPython on micro:bit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The commit or tag of microbit-foundation/micropython-microbit-v2 repository"
+        required: true
+        default: "HEAD"
+      codal_microbit_v2_version:
+        description: "The commit or tag of lancaster-university/codal-microbit-v2 repository"
+        required: true
+        default: "latest_tag"
+      micropython_version:
+        description: "The commit or tag of micropython/micropython repository"
+        required: true
+        default: "latest_tag"
+      codal_version:
+        description: "The commit or tag of lancaster-university/codal repository"
+        required: true
+        default: "latest_tag"
+      arm_none_eabi_gcc_version:
+        description: "The version of arm-none-eabi-gcc to use"
+        required: true
+        default: "latest"
+      optimization_flags:
+        description: "Optimization flags for the build. Fully optimization by default."
+        required: false
+        default: "-march=armv7e-m -mtune=cortex-m4 -O3 -fgraphite-identity -floop-nest-optimize -fdevirtualize-at-ltrans -fipa-pta -fno-semantic-interposition -fisolate-erroneous-paths-attribute"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set ref for checkout
+        id: set_ref
+        run: |
+          if [ "${{ github.event.inputs.version }}" = "latest_tag" ]; then
+            tag=$(git ls-remote --tags https://github.com/microbit-foundation/micropython-microbit-v2.git | awk -F/ '{print $3}' | grep -v '{}' | sort -V | tail -n1)
+            echo "ref=$tag" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: microbit-foundation/micropython-microbit-v2
+          ref: ${{ steps.set_ref.outputs.ref }}
+          submodules: true
+          fetch-depth: 0
+      - name: Update codal.json to specified codal-microbit-v2 version
+        run: |
+          if [ "${{ github.event.inputs.codal_microbit_v2_version }}" = "latest_tag" ]; then
+            tag=$(git ls-remote --tags https://github.com/lancaster-university/codal-microbit-v2.git | awk -F/ '{print $3}' | grep -v '{}' | sort -V | tail -n1)
+          else
+            tag="${{ github.event.inputs.codal_microbit_v2_version }}"
+          fi
+          jq --arg tag "$tag" '.target.branch = $tag' src/codal_app/codal.json > src/codal_app/codal.json.tmp && mv src/codal_app/codal.json.tmp src/codal_app/codal.json
+      - name: Update submodules to specified tags/commits
+        run: |
+          # lib/micropython
+          cd lib/micropython
+          git fetch --tags
+          if [ "${{ github.event.inputs.micropython_version }}" = "latest_tag" ]; then
+            tag=$(git tag --sort=-creatordate | tail -n1)
+            git checkout "$tag"
+          else
+            git checkout "${{ github.event.inputs.micropython_version }}"
+          fi
+          cd ../..
+          # lib/codal
+          cd lib/codal
+          git fetch --tags
+          if [ "${{ github.event.inputs.codal_version }}" = "latest_tag" ]; then
+            tag=$(git tag --sort=-creatordate | tail -n1)
+            git checkout "$tag"
+          else
+            git checkout "${{ github.event.inputs.codal_version }}"
+          fi
+          cd ../..
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          version: ${{ github.event.inputs.arm_none_eabi_gcc_version }}
+      - name: Build mpy-cross
+        run: make -C lib/micropython/mpy-cross -j2
+      - name: Build MicroPython
+        env:
+          CFLAGS: "${{ github.event.inputs.optimization_flags }}"
+          CXXFLAGS: "${{ github.event.inputs.optimization_flags }}"
+        run: CMAKE_POLICY_VERSION_MINIMUM=3.5 make -C src -j2
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micropython-microbit-v2-custom.hex
+          path: src/MICROBIT.hex
