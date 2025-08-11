@@ -8,13 +8,6 @@ on:
 jobs:
   build-and-release:
     uses: ./.github/workflows/build.yml
-    with:
-      version: master
-      codal_microbit_v2_version: latest_tag
-      micropython_version: latest_tag
-      codal_version: latest_tag
-      arm_none_eabi_gcc_version: latest
-      optimization_flags: -march=armv7e-m -mtune=cortex-m4 -O3 -fgraphite-identity -floop-nest-optimize -fdevirtualize-at-ltrans -fipa-pta -fno-semantic-interposition -fisolate-erroneous-paths-attribute
 
   release:
     needs: build-and-release
@@ -32,5 +25,8 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit: ${{ github.sha }}
           tag: ${{ steps.date.outputs.date }}
+          allowUpdates: true
           artifacts: micropython-microbit-v2-latest-full-optimization.hex
