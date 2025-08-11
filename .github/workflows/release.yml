@@ -21,7 +21,7 @@ jobs:
         run: mv micropython-microbit-v2-custom.hex micropython-microbit-v2-latest-full-optimization.hex
       - name: Get date
         id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
