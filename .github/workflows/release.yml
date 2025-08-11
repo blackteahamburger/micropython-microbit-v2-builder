@@ -1,0 +1,36 @@
+name: Monthly Release
+
+on:
+  schedule:
+    - cron: "30 23 28 * *"
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    uses: ./.github/workflows/build.yml
+    with:
+      version: master
+      codal_microbit_v2_version: latest_tag
+      micropython_version: latest_tag
+      codal_version: latest_tag
+      arm_none_eabi_gcc_version: latest
+      optimization_flags: -march=armv7e-m -mtune=cortex-m4 -O3 -fgraphite-identity -floop-nest-optimize -fdevirtualize-at-ltrans -fipa-pta -fno-semantic-interposition -fisolate-erroneous-paths-attribute
+
+  release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: micropython-microbit-v2-custom.hex
+      - name: Rename artifact
+        run: mv micropython-microbit-v2-custom.hex micropython-microbit-v2-latest-full-optimization.hex
+      - name: Get date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.date.outputs.date }}
+          artifacts: micropython-microbit-v2-latest-full-optimization.hex
