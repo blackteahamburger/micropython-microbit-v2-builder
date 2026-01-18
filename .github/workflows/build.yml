@@ -14,7 +14,7 @@ on:
       micropython_version:
         description: "The commit or tag of micropython/micropython repository"
         required: true
-        default: "latest_tag"
+        default: "v1.26.1"
       codal_version:
         description: "The commit or tag of lancaster-university/codal repository"
         required: true
@@ -37,7 +37,7 @@ on:
         default: "latest_tag"
       micropython_version:
         type: string
-        default: "latest_tag"
+        default: "v1.26.1"
       codal_version:
         type: string
         default: "latest_tag"
@@ -104,7 +104,7 @@ jobs:
           cd ../..
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
           release: ${{ inputs.arm_none_eabi_gcc_version }}
