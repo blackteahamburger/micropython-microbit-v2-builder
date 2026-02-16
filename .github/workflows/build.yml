@@ -61,7 +61,7 @@ jobs:
           else
             echo "ref=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: microbit-foundation/micropython-microbit-v2
           ref: ${{ steps.set_ref.outputs.ref }}
@@ -102,7 +102,7 @@ jobs:
             git checkout "${{ inputs.codal_version }}"
           fi
           cd ../..
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
       - uses: carlosperate/arm-none-eabi-gcc-action@v1
@@ -116,9 +116,8 @@ jobs:
           CXXFLAGS: "${{ inputs.optimization_flags }}"
         run: CMAKE_POLICY_VERSION_MINIMUM=3.5 make -C src -j2
       - name: Rename hex file
-        run: mv src/MICROBIT.hex src/micropython-microbit-v2-custom.hex
+        run: mv src/MICROBIT.hex src/micropython-microbit-v2-latest-full-optimization.hex
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: micropython-microbit-v2-custom.hex
-          path: src/micropython-microbit-v2-custom.hex
+          path: src/micropython-microbit-v2-latest-full-optimization.hex

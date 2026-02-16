@@ -6,19 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build:
     uses: ./.github/workflows/build.yml
 
   release:
-    needs: build-and-release
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v5
-        with:
-          name: micropython-microbit-v2-custom.hex
-      - name: Rename artifact
-        run: mv micropython-microbit-v2-custom.hex micropython-microbit-v2-latest-full-optimization.hex
+        uses: actions/download-artifact@v7
       - name: Get date
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
